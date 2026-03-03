@@ -522,10 +522,9 @@ async fn resume_hotkey(
 // ─── Hotkey parsing ───
 
 fn default_shortcut() -> Shortcut {
-    #[cfg(target_os = "macos")]
-    return Shortcut::new(Some(Modifiers::META), Code::Slash);
-    #[cfg(not(target_os = "macos"))]
-    return Shortcut::new(Some(Modifiers::CONTROL), Code::Slash);
+    let default_hotkey = storage::AppConfig::default().hotkey;
+    parse_hotkey(&default_hotkey)
+        .unwrap_or_else(|| Shortcut::new(Some(Modifiers::CONTROL), Code::Slash))
 }
 
 fn build_shortcut_handler(
