@@ -88,12 +88,13 @@ export function Capsule() {
 
   return (
     <div
-      className="w-full h-full flex items-center justify-start pl-3"
+      className="w-full h-full flex items-center justify-start relative"
+      style={{ background: 'transparent' }}
       onContextMenu={handleContextMenu}
     >
       {/* Persistent outer shell — jelly capsule */}
       <motion.div
-        className={`rounded-full pointer-events-auto shrink-0 ${
+        className={`absolute left-3 rounded-full pointer-events-auto shrink-0 ${
           capsuleState === 'error'
             ? 'jelly-capsule-error'
             : capsuleState === 'idle'
