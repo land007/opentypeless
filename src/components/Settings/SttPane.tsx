@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../../stores/appStore'
 import { useAuthStore } from '../../stores/authStore'
 import { STT_PROVIDERS, LANGUAGES } from '../../lib/constants'
-import { testSttConnection } from '../../lib/tauri'
+import { benchSttConnection } from '../../lib/tauri'
 import { FormField } from './shared/FormField'
 import { CheckCircle2, XCircle, Loader2, Crown } from 'lucide-react'
 
@@ -11,6 +11,8 @@ export function SttPane() {
   const updateConfig = useAppStore((s) => s.updateConfig)
   const sttTestStatus = useAppStore((s) => s.sttTestStatus)
   const setSttTestStatus = useAppStore((s) => s.setSttTestStatus)
+  const sttLatencyMs = useAppStore((s) => s.sttLatencyMs)
+  const setSttLatencyMs = useAppStore((s) => s.setSttLatencyMs)
   const { user, plan } = useAuthStore()
   const { t } = useTranslation()
 
@@ -18,9 +20,11 @@ export function SttPane() {
 
   const handleTest = async () => {
     setSttTestStatus('testing')
+    setSttLatencyMs(null)
     try {
-      const ok = await testSttConnection(config.stt_api_key, config.stt_provider)
-      setSttTestStatus(ok ? 'success' : 'error')
+      const ms = await benchSttConnection(config.stt_api_key, config.stt_provider)
+      setSttLatencyMs(ms)
+      setSttTestStatus('success')
     } catch {
       setSttTestStatus('error')
     }
@@ -34,6 +38,7 @@ export function SttPane() {
           onChange={(e) => {
             updateConfig({ stt_provider: e.target.value as typeof config.stt_provider })
             setSttTestStatus('idle')
+            setSttLatencyMs(null)
           }}
           className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-[10px] text-[13px] text-text-primary outline-none focus:border-border-focus transition-colors"
         >
@@ -68,6 +73,7 @@ export function SttPane() {
               onChange={(e) => {
                 updateConfig({ stt_api_key: e.target.value })
                 setSttTestStatus('idle')
+                setSttLatencyMs(null)
               }}
               placeholder={t('settings.enterApiKey')}
               className="flex-1 px-3 py-2.5 bg-bg-secondary border border-border rounded-[10px] text-[13px] text-text-primary outline-none focus:border-border-focus transition-colors"
@@ -83,7 +89,7 @@ export function SttPane() {
           </div>
           {sttTestStatus === 'success' && (
             <p className="flex items-center gap-1 text-[12px] text-success mt-2">
-              <CheckCircle2 size={13} /> {t('settings.connectionSuccess')}
+              <CheckCircle2 size={13} /> {sttLatencyMs !== null ? `${sttLatencyMs}ms` : t('settings.connectionSuccess')}
             </p>
           )}
           {sttTestStatus === 'error' && (

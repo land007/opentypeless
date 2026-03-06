@@ -45,9 +45,12 @@ impl TextOutput for ClipboardOutput {
                         "-e",
                         r#"tell application "System Events" to keystroke "v" using command down"#,
                     ])
-                    .status();
-                if let Err(e) = status {
-                    anyhow::bail!("osascript paste failed: {}", e);
+                    .status()?;
+                if !status.success() {
+                    anyhow::bail!(
+                        "osascript paste failed with exit code: {:?}",
+                        status.code()
+                    );
                 }
             }
 

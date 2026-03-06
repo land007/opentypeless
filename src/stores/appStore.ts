@@ -119,6 +119,12 @@ interface AppState {
   llmTestStatus: TestStatus
   setLlmTestStatus: (s: TestStatus) => void
 
+  // Latency benchmark results (ms), null = not yet measured
+  sttLatencyMs: number | null
+  setSttLatencyMs: (ms: number | null) => void
+  llmLatencyMs: number | null
+  setLlmLatencyMs: (ms: number | null) => void
+
   // LLM model list cache (persists across tab switches)
   llmModels: string[]
   setLlmModels: (models: string[]) => void
@@ -206,6 +212,11 @@ export const useAppStore = create<AppState>((set) => ({
   setSttTestStatus: (sttTestStatus) => set({ sttTestStatus }),
   llmTestStatus: 'idle',
   setLlmTestStatus: (llmTestStatus) => set({ llmTestStatus }),
+
+  sttLatencyMs: null,
+  setSttLatencyMs: (sttLatencyMs) => set({ sttLatencyMs }),
+  llmLatencyMs: null,
+  setLlmLatencyMs: (llmLatencyMs) => set({ llmLatencyMs }),
 
   llmModels: [],
   setLlmModels: (llmModels) => set({ llmModels }),

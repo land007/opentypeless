@@ -33,6 +33,20 @@ export async function testLlmConnection(
   return invoke('test_llm_connection', { apiKey, provider, baseUrl, model })
 }
 
+// Latency benchmark — returns round-trip time in milliseconds
+export async function benchSttConnection(apiKey: string, provider: string): Promise<number> {
+  return invoke('bench_stt_connection', { apiKey, provider })
+}
+
+export async function benchLlmConnection(
+  apiKey: string,
+  provider: string,
+  baseUrl: string,
+  model: string,
+): Promise<number> {
+  return invoke('bench_llm_connection', { apiKey, provider, baseUrl, model })
+}
+
 // LLM models
 export async function fetchLlmModels(apiKey: string, baseUrl: string): Promise<string[]> {
   return invoke('fetch_llm_models', { apiKey, baseUrl })

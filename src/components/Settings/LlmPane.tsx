@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../../stores/appStore'
 import { useAuthStore } from '../../stores/authStore'
 import { LLM_PROVIDERS, LLM_DEFAULT_CONFIG, TARGET_LANGUAGES } from '../../lib/constants'
-import { testLlmConnection, fetchLlmModels } from '../../lib/tauri'
+import { benchLlmConnection, fetchLlmModels } from '../../lib/tauri'
 import { FormField } from './shared/FormField'
 import { Toggle } from './shared/Toggle'
 import { CheckCircle2, XCircle, Loader2, RefreshCw, Crown } from 'lucide-react'
@@ -13,6 +13,8 @@ export function LlmPane() {
   const updateConfig = useAppStore((s) => s.updateConfig)
   const llmTestStatus = useAppStore((s) => s.llmTestStatus)
   const setLlmTestStatus = useAppStore((s) => s.setLlmTestStatus)
+  const llmLatencyMs = useAppStore((s) => s.llmLatencyMs)
+  const setLlmLatencyMs = useAppStore((s) => s.setLlmLatencyMs)
   const { user, plan } = useAuthStore()
   const { t } = useTranslation()
 
@@ -56,14 +58,16 @@ export function LlmPane() {
 
   const handleTest = async () => {
     setLlmTestStatus('testing')
+    setLlmLatencyMs(null)
     try {
-      const ok = await testLlmConnection(
+      const ms = await benchLlmConnection(
         config.llm_api_key,
         config.llm_provider,
         config.llm_base_url,
         config.llm_model,
       )
-      setLlmTestStatus(ok ? 'success' : 'error')
+      setLlmLatencyMs(ms)
+      setLlmTestStatus('success')
     } catch {
       setLlmTestStatus('error')
     }
@@ -83,6 +87,7 @@ export function LlmPane() {
               llm_model: defaults?.model ?? config.llm_model,
             })
             setLlmTestStatus('idle')
+            setLlmLatencyMs(null)
             setModels([])
           }}
           className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-[10px] text-[13px] text-text-primary outline-none focus:border-border-focus transition-colors"
@@ -119,6 +124,7 @@ export function LlmPane() {
                 onChange={(e) => {
                   updateConfig({ llm_api_key: e.target.value })
                   setLlmTestStatus('idle')
+                  setLlmLatencyMs(null)
                 }}
                 placeholder={t('settings.enterApiKey')}
                 className="flex-1 px-3 py-2.5 bg-bg-secondary border border-border rounded-[10px] text-[13px] text-text-primary outline-none focus:border-border-focus transition-colors"
@@ -134,7 +140,7 @@ export function LlmPane() {
             </div>
             {llmTestStatus === 'success' && (
               <p className="flex items-center gap-1 text-[12px] text-success mt-2">
-                <CheckCircle2 size={13} /> {t('settings.connectionSuccess')}
+                <CheckCircle2 size={13} /> {llmLatencyMs !== null ? `${llmLatencyMs}ms` : t('settings.connectionSuccess')}
               </p>
             )}
             {llmTestStatus === 'error' && (
@@ -151,8 +157,8 @@ export function LlmPane() {
                 <input
                   list="llm-model-list"
                   value={config.llm_model}
-                  onChange={(e) => updateConfig({ llm_model: e.target.value })}
-                  placeholder="glm-4.7"
+                  onChange={(e) => { updateConfig({ llm_model: e.target.value }); setLlmLatencyMs(null) }}
+                  placeholder="e.g. gpt-4o-mini"
                   className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-[10px] text-[13px] text-text-primary outline-none focus:border-border-focus transition-colors"
                 />
                 <datalist id="llm-model-list">
