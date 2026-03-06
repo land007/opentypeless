@@ -32,12 +32,12 @@ vi.mock('react-i18next', () => ({
 // Mock stores
 const mockAppStore = {
   config: {
-    stt_provider: 'deepgram' as const,
+    stt_provider: 'deepgram' as string,
     stt_api_key: '',
     stt_language: 'en',
   },
   updateConfig: vi.fn(),
-  sttTestStatus: 'idle' as const,
+  sttTestStatus: 'idle' as 'idle' | 'testing' | 'success' | 'error',
   setSttTestStatus: vi.fn(),
   sttLatencyMs: null as number | null,
   setSttLatencyMs: vi.fn(),

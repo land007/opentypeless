@@ -40,7 +40,7 @@ vi.mock('react-i18next', () => ({
 // Mock stores - must be done before importing the component
 const mockAppStore = {
   config: {
-    llm_provider: 'openai' as const,
+    llm_provider: 'openai' as string,
     llm_api_key: '',
     llm_base_url: 'https://api.openai.com/v1',
     llm_model: 'gpt-4o-mini',
@@ -50,7 +50,7 @@ const mockAppStore = {
     target_lang: 'en',
   },
   updateConfig: vi.fn(),
-  llmTestStatus: 'idle' as const,
+  llmTestStatus: 'idle' as 'idle' | 'testing' | 'success' | 'error',
   setLlmTestStatus: vi.fn(),
   llmLatencyMs: null as number | null,
   setLlmLatencyMs: vi.fn(),
