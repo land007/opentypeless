@@ -154,6 +154,7 @@ unsafe fn get_process_name(pid: u32) -> Option<String> {
     }
 }
 
+#[allow(dead_code)]
 fn classify_app(app_name: &str) -> AppType {
     let name = app_name.to_lowercase();
     if ["outlook", "gmail", "thunderbird", "mail"]

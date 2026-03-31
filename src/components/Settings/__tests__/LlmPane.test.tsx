@@ -217,7 +217,7 @@ describe('LlmPane', () => {
           'sk-test123',
           'openai',
           'https://api.openai.com/v1',
-          'gpt-4o-mini'
+          'gpt-4o-mini',
         )
       })
     })
@@ -275,7 +275,9 @@ describe('LlmPane', () => {
 
       fireEvent.change(input, { target: { value: 'https://custom.api.com/v1' } })
 
-      expect(mockAppStore.updateConfig).toHaveBeenCalledWith({ llm_base_url: 'https://custom.api.com/v1' })
+      expect(mockAppStore.updateConfig).toHaveBeenCalledWith({
+        llm_base_url: 'https://custom.api.com/v1',
+      })
     })
   })
 
