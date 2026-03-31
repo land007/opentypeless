@@ -58,10 +58,13 @@ impl LlmProvider for CloudLlmProvider {
         if has_selected_text {
             messages.push(serde_json::json!({
                 "role": "user",
-                "content": format!("[Selected Text]\n{}", req.selected_text.as_ref().unwrap())
+                "content": format!("<selected_text>\n{}\n</selected_text>", req.selected_text.as_ref().unwrap())
             }));
         }
-        messages.push(serde_json::json!({ "role": "user", "content": req.raw_text }));
+        messages.push(serde_json::json!({
+            "role": "user",
+            "content": format!("<transcription>\n{}\n</transcription>", req.raw_text)
+        }));
 
         let api_base_url = crate::api_base_url();
 
