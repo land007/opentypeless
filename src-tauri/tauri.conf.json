@@ -10,6 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "label": "main",
@@ -67,6 +68,5 @@
       "entitlements": "./Entitlements.plist",
       "infoPlist": "./Info.plist"
     }
-  },
-  "macos-private-api": true
+  }
 }
