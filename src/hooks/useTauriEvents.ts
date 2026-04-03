@@ -41,6 +41,7 @@ export function useTauriEvents() {
     addListener<PipelineState>('pipeline:state', (state) => {
       setPipelineState(state)
       if (state === 'idle') {
+        setPipelineError(null)
         getHistory(200, 0)
           .then(setHistory)
           .catch((err) => {

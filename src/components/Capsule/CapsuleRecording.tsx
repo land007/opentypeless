@@ -1,19 +1,18 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { X } from 'lucide-react'
-import { useRecording } from '../../hooks/useRecording'
+import { abortRecording } from '../../lib/tauri'
 import { Waveform } from './Waveform'
 import { DurationTimer } from './DurationTimer'
 
 export function CapsuleRecording() {
-  const { stopRecording } = useRecording()
   const reduced = useReducedMotion()
 
   const handleCancel = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
-      await stopRecording()
+      await abortRecording()
     } catch (err) {
-      console.error('Failed to stop recording:', err)
+      console.error('Failed to abort recording:', err)
     }
   }
 

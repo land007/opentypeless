@@ -1,6 +1,6 @@
 use anyhow::Result;
 use enigo::{Direction, Enigo, Key, Keyboard, Settings as EnigoSettings};
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
 use tauri::Manager;
@@ -83,6 +83,7 @@ pub struct PipelineHandle {
     audio_volume: Arc<Mutex<f32>>,
     accumulated_text: Arc<Mutex<String>>,
     stt_done: Arc<Notify>,
+    abort_flag: Arc<AtomicBool>,
     preloaded_config: Arc<Mutex<Option<storage::AppConfig>>>,
     preloaded_app_ctx: Arc<Mutex<Option<app_detector::AppContext>>>,
     preloaded_dictionary: Arc<Mutex<Option<Vec<String>>>>,
@@ -100,6 +101,7 @@ impl PipelineHandle {
             audio_volume: Arc::new(Mutex::new(0.0)),
             accumulated_text: Arc::new(Mutex::new(String::new())),
             stt_done: Arc::new(Notify::new()),
+            abort_flag: Arc::new(AtomicBool::new(false)),
             preloaded_config: Arc::new(Mutex::new(None)),
             preloaded_app_ctx: Arc::new(Mutex::new(None)),
             preloaded_dictionary: Arc::new(Mutex::new(None)),
@@ -131,6 +133,34 @@ impl PipelineHandle {
 
     pub fn current_state(&self) -> PipelineState {
         PipelineState::from_u8(self.state.load(Ordering::SeqCst))
+    }
+
+    /// Immediately abort the pipeline regardless of current state.
+    /// Stops audio capture, forces state to Idle, and signals any
+    /// ongoing stop() to exit early via abort_flag.
+    pub fn abort(&self) {
+        tracing::info!("Pipeline abort requested (current state: {:?})", self.current_state());
+
+        // Set abort flag so any running stop() exits early
+        self.abort_flag.store(true, Ordering::SeqCst);
+
+        // Stop audio capture (closes channel → STT task terminates naturally)
+        {
+            let mut handle = self.audio_handle.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(ref mut h) = *handle {
+                h.stop();
+            }
+            *handle = None;
+        }
+
+        // Unblock stop() if it's waiting on stt_done.notified()
+        self.stt_done.notify_one();
+
+        // Clear accumulated text
+        self.accumulated_text.lock().unwrap_or_else(|e| e.into_inner()).clear();
+
+        // Force state to Idle — emits pipeline:state event to sync frontend
+        self.set_state(PipelineState::Idle);
     }
 
     /// Capture selected text from the foreground app by simulating Ctrl+C / Cmd+C.
@@ -195,6 +225,9 @@ impl PipelineHandle {
     }
 
     pub async fn start(&self) -> Result<()> {
+        // Reset abort flag for new recording
+        self.abort_flag.store(false, Ordering::SeqCst);
+
         // Atomic CAS: only one caller can transition Idle → Recording
         if self
             .state
@@ -573,6 +606,12 @@ impl PipelineHandle {
             stt_elapsed.as_millis()
         );
 
+        // Check if pipeline was aborted while waiting for STT
+        if self.abort_flag.load(Ordering::SeqCst) {
+            tracing::info!("Pipeline aborted after STT wait, skipping LLM and output");
+            return Ok(());
+        }
+
         let raw_text = self
             .accumulated_text
             .lock()
@@ -592,6 +631,12 @@ impl PipelineHandle {
         let llm_elapsed;
 
         // Polish with LLM (resources already pre-built)
+        // Check abort before entering LLM polish and output
+        if self.abort_flag.load(Ordering::SeqCst) {
+            tracing::info!("Pipeline aborted before LLM/output");
+            return Ok(());
+        }
+
         if let Some((llm_config, provider)) = pre_llm {
             self.set_state(PipelineState::Polishing);
             let llm_start = std::time::Instant::now();
@@ -614,6 +659,11 @@ impl PipelineHandle {
 
             match provider.polish(&llm_config, &req, Some(&on_chunk)).await {
                 Ok(response) => {
+                    // Check abort after LLM returns — skip output if cancelled during polish
+                    if self.abort_flag.load(Ordering::SeqCst) {
+                        tracing::info!("Pipeline aborted after LLM polish, skipping output");
+                        return Ok(());
+                    }
                     final_text = response.polished_text;
                     llm_elapsed = llm_start.elapsed();
 
@@ -628,6 +678,11 @@ impl PipelineHandle {
                     }
                 }
                 Err(e) => {
+                    // Check abort after LLM error — skip fallback output if cancelled
+                    if self.abort_flag.load(Ordering::SeqCst) {
+                        tracing::info!("Pipeline aborted after LLM error, skipping output");
+                        return Ok(());
+                    }
                     tracing::error!("LLM polish failed: {}, outputting raw text", e);
                     final_text = raw_text.clone();
                     llm_elapsed = llm_start.elapsed();

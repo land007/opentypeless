@@ -127,6 +127,12 @@ async fn stop_recording(state: tauri::State<'_, pipeline::PipelineHandle>) -> Re
 }
 
 #[tauri::command]
+fn abort_recording(state: tauri::State<'_, pipeline::PipelineHandle>) -> Result<(), String> {
+    state.abort();
+    Ok(())
+}
+
+#[tauri::command]
 async fn get_config(
     state: tauri::State<'_, storage::ConfigManager>,
 ) -> Result<storage::AppConfig, String> {
@@ -1297,6 +1303,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             start_recording,
             stop_recording,
+            abort_recording,
             get_config,
             update_config,
             test_stt_connection,

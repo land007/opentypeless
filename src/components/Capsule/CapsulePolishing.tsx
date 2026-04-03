@@ -1,16 +1,17 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { X } from 'lucide-react'
-import { useAppStore } from '../../stores/appStore'
+import { abortRecording } from '../../lib/tauri'
 
 export function CapsulePolishing() {
-  const resetRecording = useAppStore((s) => s.resetRecording)
-  const setPipelineState = useAppStore((s) => s.setPipelineState)
   const reduced = useReducedMotion()
 
-  const handleCancel = (e: React.MouseEvent) => {
+  const handleCancel = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    resetRecording()
-    setPipelineState('idle')
+    try {
+      await abortRecording()
+    } catch (err) {
+      console.error('Failed to abort polishing:', err)
+    }
   }
 
   return (

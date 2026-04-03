@@ -1,19 +1,21 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { Loader2, X } from 'lucide-react'
+import { abortRecording } from '../../lib/tauri'
 import { useAppStore } from '../../stores/appStore'
 
 export function CapsuleProcessing() {
   const partialTranscript = useAppStore((s) => s.partialTranscript)
-  const resetRecording = useAppStore((s) => s.resetRecording)
-  const setPipelineState = useAppStore((s) => s.setPipelineState)
   const reduced = useReducedMotion()
 
   const displayText = partialTranscript || 'Transcribing...'
 
-  const handleCancel = (e: React.MouseEvent) => {
+  const handleCancel = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    resetRecording()
-    setPipelineState('idle')
+    try {
+      await abortRecording()
+    } catch (err) {
+      console.error('Failed to abort processing:', err)
+    }
   }
 
   return (

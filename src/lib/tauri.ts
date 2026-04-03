@@ -10,6 +10,10 @@ export async function stopRecording(): Promise<void> {
   return invoke('stop_recording')
 }
 
+export async function abortRecording(): Promise<void> {
+  return invoke('abort_recording')
+}
+
 // Config commands
 export async function getConfig(): Promise<AppConfig> {
   return invoke('get_config')
