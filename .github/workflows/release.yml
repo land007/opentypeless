@@ -31,9 +31,11 @@ jobs:
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             args: ''
+          # ARM64 build uses cross for cross-compilation
           - platform: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             args: '--target aarch64-unknown-linux-gnu'
+            use_cross: true
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -53,16 +55,15 @@ jobs:
           node -e "const fs=require('fs');let c=fs.readFileSync('src-tauri/Cargo.toml','utf8');c=c.replace(/^version = \".*\"/m,'version = \"$VERSION\"');fs.writeFileSync('src-tauri/Cargo.toml',c);"
 
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-22.04' && !matrix.use_cross
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev libxdo-dev
-          # Install cross-compilation tools for aarch64
-          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
-            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-            # Install aarch64 libraries
-            sudo apt-get install -y libwebkit2gtk-4.1-dev:arm64 libappindicator3-dev:arm64 librsvg2-dev:arm64 libasound2-dev:arm64 libxdo-dev:arm64 || true
-          fi
+
+      - name: Install cross for ARM64 builds
+        if: matrix.use_cross
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross
 
       - uses: actions/setup-node@v4
         with:
@@ -79,7 +80,17 @@ jobs:
 
       - run: npm ci
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Build with cross for ARM64
+        if: matrix.use_cross
+        run: |
+          export CROSS_CONTAINER_IN_CONTAINER=true
+          npm run tauri build -- ${{ matrix.args }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build with tauri-action
+        if: "!matrix.use_cross"
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -89,3 +100,18 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Upload ARM64 artifacts
+        if: matrix.use_cross
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/aarch64-unknown-linux-gnu/release/bundle/deb/*.deb
+            src-tauri/target/aarch64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+          draft: true
+          prerelease: false
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: 'OpenTypeless ${{ github.event.inputs.tag || github.ref_name }}'
+          body: 'See the assets below to download and install.'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
