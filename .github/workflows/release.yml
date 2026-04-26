@@ -30,11 +30,11 @@ jobs:
             args: '--target x86_64-apple-darwin'
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            args: ''
+            args: '--bundles deb appimage'
           # ARM64 build using GitHub's free ARM64 runner (public repos only)
           - platform: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            args: ''
+            args: '--bundles deb appimage'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -57,7 +57,10 @@ jobs:
         if: startsWith(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev libxdo-dev
+          sudo apt-get install -y build-essential curl wget file pkg-config libssl-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev patchelf libasound2-dev libxdo-dev
+          sudo apt-get install -y libayatana-appindicator3-dev || sudo apt-get install -y libappindicator3-dev
+          sudo apt-get install -y libfuse2 || sudo apt-get install -y libfuse2t64
 
       - name: Verify Linux ARM64 runner
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -69,6 +72,16 @@ jobs:
             echo "Linux ARM64 release builds must run on an ARM64 runner to avoid pkg-config cross-compilation failures."
             exit 1
           fi
+
+      - name: Verify Linux native dependencies
+        if: startsWith(matrix.platform, 'ubuntu')
+        shell: bash
+        run: |
+          pkg-config --modversion glib-2.0
+          pkg-config --modversion gtk+-3.0
+          pkg-config --modversion webkit2gtk-4.1
+          pkg-config --modversion xdo
+          pkg-config --modversion ayatana-appindicator3-0.1 || pkg-config --modversion appindicator3-0.1
 
       - uses: actions/setup-node@v4
         with:
