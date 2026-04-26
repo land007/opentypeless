@@ -79,8 +79,10 @@ jobs:
           pkg-config --modversion glib-2.0
           pkg-config --modversion gtk+-3.0
           pkg-config --modversion webkit2gtk-4.1
-          pkg-config --modversion xdo
           pkg-config --modversion appindicator3-0.1
+          # libxdo-dev does not ship a pkg-config file on Ubuntu; verify the headers/library directly
+          test -f /usr/include/xdo.h
+          ldconfig -p | grep -q libxdo.so
 
       - uses: actions/setup-node@v4
         with:
