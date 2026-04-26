@@ -58,8 +58,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential curl wget file pkg-config libssl-dev
-          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev patchelf libasound2-dev libxdo-dev
-          sudo apt-get install -y libayatana-appindicator3-dev || sudo apt-get install -y libappindicator3-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev libxdo-dev
           sudo apt-get install -y libfuse2 || sudo apt-get install -y libfuse2t64
 
       - name: Verify Linux ARM64 runner
@@ -81,7 +80,7 @@ jobs:
           pkg-config --modversion gtk+-3.0
           pkg-config --modversion webkit2gtk-4.1
           pkg-config --modversion xdo
-          pkg-config --modversion ayatana-appindicator3-0.1 || pkg-config --modversion appindicator3-0.1
+          pkg-config --modversion appindicator3-0.1
 
       - uses: actions/setup-node@v4
         with:
